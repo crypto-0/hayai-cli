@@ -174,7 +174,7 @@ class Sol(ProviderParser):
                 try:
                     films += next(movies_generator)
                 except StopIteration:
-                    more_shows = False
+                    more_movies = False
             if(len(films) > 0):
                 yield films
 
@@ -268,7 +268,7 @@ class Sol(ProviderParser):
         return Info(title=title,release=release,description=description.strip(),recommendation=recommendation)
 
     @staticmethod
-    def parse_search( query: str,filter: Union[Filter,None] = None) -> Iterator[List[Film]]:
+    def parse_search( query: str,filter: Union[Filter,None] = None,max_page: int = 1) -> Iterator[List[Film]]:
         s: requests.Session = requests.Session()
         query = query.strip().replace(" ","-")
         search_url: str = Sol.host_url + "/search/" + query
@@ -281,12 +281,11 @@ class Sol(ProviderParser):
             genre_parameter = genre_parameter.strip("-")
             search_url: str = "{host_url}/filter?type={type}&quality=all&release_year=all&genre={genre}&country=all".format(host_url=Sol.host_url,type=type_parameter,genre=genre_parameter)
 
-        max_page = 1
         r: requests.Response = s.get(search_url + "?page=1",headers=Sol.headers)
         html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         last_page_link = html_doc.cssselect(".pagination.pagination-lg a")
         if len(last_page_link) > 0:
-            max_page = int(last_page_link[-1].get("href").rsplit("=",1)[1])
+            max_page = min(int(last_page_link[-1].get("href").rsplit("=",1)[1]),max_page)
 
         for i in range(1,max_page + 1):
             r: requests.Response = s.get(search_url + "?page=" + str(i),headers=Sol.headers)
@@ -301,8 +300,8 @@ class Sol(ProviderParser):
                 film_info: str = film_info_tags[0].text
                 is_tv: bool = True if film_info_tags[-1].text == "TV" else False
                 films.append(Film(title,Sol.host_url + link,is_tv,film_info))
-            s.close()
             yield films
+        s.close()
     @staticmethod
     def parse_category(category: str) ->Iterator[List[Film]]:
         if(category == "latest"):
