@@ -1,10 +1,18 @@
-from hayai_cli.provider_parsers.provider_parser import *
-from hayai_cli.provider_parsers.sol import Sol
-from hayai_cli.provider_parsers.extractors.video_extractor import VideoContainer
-from typing import Iterator
-import sys
+from itertools import islice
 import pathlib
+import sys
+from typing import Dict, Iterator
+from typing import List
+
+import click
 import httpx
+from provider_parsers import Film
+from provider_parsers import VideoServer
+from provider_parsers import Sol
+from provider_parsers.provider_parser import FilmInfo
+
+from hayai_cli.downloader.handle import handle_download
+from hayai_cli.utilities.convert_video import convert_video
 
 
 @click.group(name="sol",help="solarmovie provider")
@@ -21,10 +29,8 @@ def sol_cli():
 @click.option("-p", "--page",help="up to what pages to show at once",type=int,default = 1)
 def download_cmd(query:str,index,season,episode_ranges,quality,dir,page):
     color = "blue"
-    search_films_iterator: Iterator[List[Film]] = Sol.parse_search(query=query,max_page=page)
-    all_films: List[Film] = []
-    for films in search_films_iterator:
-        all_films += films
+    search_films_iterator: Iterator[Film] = Sol.parse_search(query=query)
+    all_films: List[Film] = list(islice(search_films_iterator,10))
     if len(all_films) == 0:
         click.secho("No search results were found",fg="red")
         sys.exit()
@@ -62,7 +68,7 @@ def download_cmd(query:str,index,season,episode_ranges,quality,dir,page):
                if(episode_servers.get(idx) !=None):continue
                servers = Sol.parse_episode_servers(episodes[idx -1].id)
                episode_servers[idx] = servers
-        info: Info = Sol.parse_info(all_films[index -1].link)
+        info: FilmInfo = Sol.parse_info(all_films[index -1].link)
         season = str(season).zfill(2)
         season_name = "Season " + season
         show_path = pathlib.Path("{dir}/{title_name} ({release_year})/{season_name}".format(dir=dir,title_name=info.title,release_year=info.release.split("-")[0],season_name=season_name))
@@ -70,12 +76,15 @@ def download_cmd(query:str,index,season,episode_ranges,quality,dir,page):
         click.secho("Downloading videos...",fg=color)
         with httpx.Client(timeout=15) as client:
             for episode, servers in episode_servers.items():
-                episode_name ="{title} ({release_year}) - s{season}-e{episode}".format(title=info.title,release_year=info.release.split("-"),season=season,episode=str(episode).zfill(2))
+                episode_name ="{title} ({release_year}) - s{season}-e{episode}".format(title=info.title,release_year=info.release.split("-")[0],season=season,episode=str(episode).zfill(2))
                 for server in servers:
                     episode_container = server.extractor.extract(server.embed)
                     try:
                         if(not episode_container.videos):continue
                         url = episode_container.videos[0].url
+                        handle_download(client,url,Sol.headers,show_path,episode_name)
+                        episode_location_ts = str(show_path) + "/" + episode_name +".ts"
+                        convert_video(episode_location_ts)
                         break
                     except Exception as e:
                         print(e)
@@ -83,31 +92,49 @@ def download_cmd(query:str,index,season,episode_ranges,quality,dir,page):
 
 
     else:
-        pass
+        click.secho("Getting movie servers...",fg=color)
+        link: str = (all_films[index - 1].link).rsplit("-",1)[-1]
+        servers = Sol.parse_movie_servers(link)
+        info: FilmInfo = Sol.parse_info(all_films[index -1].link)
+        movie_path = pathlib.Path("{dir}/{title_name} ({release_year})".format(dir=dir,title_name=info.title,release_year=info.release.split("-")[0]))
+        pathlib.Path.mkdir(movie_path,parents=True,exist_ok=True)
+        click.secho("Downloading videos...",fg=color)
+        with httpx.Client(timeout=15) as client:
+            for server in servers:
+                movie_container = server.extractor.extract(server.embed)
+                try:
+                    if(not movie_container.videos):continue
+                    url = movie_container.videos[0].url
+                    handle_download(client,url,Sol.headers,movie_path,movie_path.name)
+                    movie_location_ts = str(movie_path) + "/" + movie_path.name + ".ts"
+                    convert_video(movie_location_ts)
+                    break
+                except Exception as e:
+                    print(e)
 
 
 
 @sol_cli.command(name="search",help="search for movies or shows")
 @click.argument("query",required=True)
 def search_cmd(query:str):
-    search_films_iterator: Iterator[List[Film]] = Sol.parse_search(query=query)
-    for films in search_films_iterator:
-        Sol.print_films(films=films)
+    search_films_iterator: Iterator[Film] = Sol.parse_search(query=query)
+    all_films: List[Film] = list(islice(search_films_iterator,20))
+    Sol.print_films(all_films)
     
 @sol_cli.command(name="latest",help="Show latest movies or shows")
 def latest_cmd():
-    latest_films_iterator: Iterator[List[Film]] = Sol.parse_category("latest")
-    for films in latest_films_iterator:
-        Sol.print_films(films=films)
+    latest_films_iterator: Iterator[Film] = Sol.parse_category("latest")
+    all_films: List[Film] = list(islice(latest_films_iterator,20))
+    Sol.print_films(all_films)
     
 @sol_cli.command(name="trending",help="Show trending movies or shows")
 def trending_cmd():
-    trending_films_iterator: Iterator[List[Film]] = Sol.parse_category("trending")
-    for films in trending_films_iterator:
-        Sol.print_films(films=films)
+    trending_films_iterator: Iterator[Film] = Sol.parse_category("trending")
+    all_films: List[Film] = list(islice(trending_films_iterator,20))
+    Sol.print_films(all_films)
 
 @sol_cli.command(name="coming",help="Show coming movies or shows")
 def coming_cmd():
-    coming_films_iterator: Iterator[List[Film]] = Sol.parse_category("coming")
-    for films in coming_films_iterator:
-        Sol.print_films(films=films)
+    coming_films_iterator: Iterator[Film] = Sol.parse_category("coming")
+    all_films: List[Film] = list(islice(coming_films_iterator,30))
+    Sol.print_films(all_films)
