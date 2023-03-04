@@ -300,7 +300,7 @@ class Sol(ProviderParser):
         if(category == "trending"):
             return Sol.parse_trending()
 
-        if(category == "coming soon"):
+        if(category == "coming"):
             return Sol.parse_coming_soon()
         raise ValueError("Thats not a valid category")
         
