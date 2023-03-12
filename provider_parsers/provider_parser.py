@@ -1,7 +1,6 @@
 from abc import ABC ,abstractmethod
 from typing import Iterator, List, Optional
 from typing import Dict
-from typing import Union
 from .extractors.video_extractor import VideoExtractor
 import click
 

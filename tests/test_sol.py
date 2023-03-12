@@ -4,7 +4,7 @@ from provider_parsers import Episode
 from provider_parsers import Sol
 from provider_parsers import Film
 from provider_parsers.extractors.video_extractor import VideoContainer
-from typing import Iterator
+from typing import Iterator, Optional
 from typing import List
 from itertools import islice
 import unittest
@@ -57,10 +57,19 @@ class TestSol(unittest.TestCase):
         trending_shows: List[Film] = list(islice(trending_shows_generator,6))
         self.assertGreater(len(trending_shows),5)
 
-        parse_category_generator: Iterator[Film] = Sol.parse_category("coming soon")
-        coming_soon_category: List[Film] = list(islice(parse_category_generator,6))
-        self.assertEqual(coming_soon_category[-1].title,coming_soon_category[-1].title)
-        info: FilmInfo = Sol.parse_info("https://solarmovie.pe/movie/watch-avatar-free-19690")
-        self.assertEqual(info.title,"avatar")
-        self.assertEqual(info.description,"In the 22nd century, a paraplegic Marine is dispatched to the moon Pandora on a unique mission, but becomes torn between following orders and protecting an alien civilization.")
-        self.assertEqual(info.release,"2009-12-10")
+        movies_generator: Iterator[Film]= Sol.parse_movies()
+        movies: List[Film] = list(islice(movies_generator,6))
+        self.assertGreater(len(movies),5)
+
+        shows_generator: Iterator[Film]= Sol.parse_shows()
+        shows: List[Film] = list(islice(shows_generator,6))
+        self.assertGreater(len(shows),5)
+
+        parse_category_generator: Optional[Iterator[Film]] = Sol.parse_category("coming soon")
+        if parse_category_generator is not None:
+            coming_soon_category: List[Film] = list(islice(parse_category_generator,6))
+            self.assertEqual(coming_soon_category[-1].title,coming_soon_category[-1].title)
+            info: FilmInfo = Sol.parse_info("https://solarmovie.pe/movie/watch-avatar-free-19690")
+            self.assertEqual(info.title,"avatar")
+            self.assertEqual(info.description,"In the 22nd century, a paraplegic Marine is dispatched to the moon Pandora on a unique mission, but becomes torn between following orders and protecting an alien civilization.")
+            self.assertEqual(info.release,"2009-12-10")

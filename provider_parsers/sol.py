@@ -1,5 +1,5 @@
 from .provider_parser import *
-from typing import List , Union
+from typing import List 
 from typing import Iterator
 import requests
 import lxml.html
@@ -46,7 +46,7 @@ class Sol(ProviderParser):
             "Show": "tv"
             }
 
-    categories: List[str] = ["latest","trending","coming soon" ]
+    categories: List[str] = ["latest","trending","coming soon","movies","tv shows" ]
     extractors: Dict = {
             "Server UpCloud": UpCloud,
             "UpCloud": UpCloud,
@@ -121,6 +121,39 @@ class Sol(ProviderParser):
         return servers
 
     @staticmethod
+    def parse_movies() -> Iterator[Film]:
+        movies_ur: str = f"{Sol.host_url}/movie"
+        r: requests.Response = requests.get(movies_ur + "?page=1",headers=Sol.headers)
+        html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
+        last_page_link = html_doc.cssselect(".pagination.pagination-lg a")
+        max_page = 1
+        if len(last_page_link) > 0:
+            max_page = int(last_page_link[-1].get("href").rsplit("=",1)[1])
+
+        for i in range(1,max_page + 1):
+            r: requests.Response = requests.get(movies_ur + "?page=" + str(i),headers=Sol.headers)
+            html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
+            movie_results: List[lxml.html.HtmlElement] = html_doc.cssselect(".flw-item")
+            for movie_result in movie_results:
+                yield Sol.extract_film_element(movie_result)
+    @staticmethod
+    def parse_shows() -> Iterator[Film]:
+        shows_ur: str = f"{Sol.host_url}/tv-show"
+        r: requests.Response = requests.get(shows_ur + "?page=1",headers=Sol.headers)
+        html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
+        last_page_link = html_doc.cssselect(".pagination.pagination-lg a")
+        max_page = 1
+        if len(last_page_link) > 0:
+            max_page = int(last_page_link[-1].get("href").rsplit("=",1)[1])
+
+        for i in range(1,max_page + 1):
+            r: requests.Response = requests.get(shows_ur + "?page=" + str(i),headers=Sol.headers)
+            html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
+            show_results: List[lxml.html.HtmlElement] = html_doc.cssselect(".flw-item")
+            for show_result in show_results:
+                yield Sol.extract_film_element(show_result)
+
+    @staticmethod
     def parse_latest_shows() -> Iterator[Film]:
         home_url: str = f"{Sol.host_url}/home"
         r: requests.Response = requests.get(home_url,headers=Sol.headers)
@@ -128,15 +161,7 @@ class Sol(ProviderParser):
         section_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".section-id-02")
         flw_show_elements: List[lxml.html.HtmlElement] = section_elements[1].cssselect(".flw-item")
         for flw_element in flw_show_elements:
-            poster_url: lxml.html.HtmlElement = flw_element.cssselect(".film-poster > img")[0].get("data-src")
-            link_tag: lxml.html.HtmlElement = flw_element.cssselect(".film-poster > a")[0]
-            title: str = link_tag.get("title")
-            link: str = link_tag.get("href")
-            film_info_tags: List[lxml.html.HtmlElement] = flw_element.cssselect(".film-detail .fd-infor span")
-            extra_details: str = film_info_tags[0].text
-            is_tv: bool = True if film_info_tags[-1].text == "TV" else False
-            yield Film(title,Sol.host_url + link,is_tv,poster_url,extra= extra_details)
-
+            yield Sol.extract_film_element(flw_element)
             
     @staticmethod
     def parse_latest_movies() -> Iterator[Film]:
@@ -146,14 +171,7 @@ class Sol(ProviderParser):
         section_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".section-id-02")
         flw_movie_elements: List[lxml.html.HtmlElement] = section_elements[0].cssselect(".flw-item")
         for flw_element in flw_movie_elements:
-            poster_url: lxml.html.HtmlElement = flw_element.cssselect(".film-poster > img")[0].get("data-src")
-            link_tag: lxml.html.HtmlElement = flw_element.cssselect(".film-poster > a")[0]
-            title: str = link_tag.get("title")
-            link: str = link_tag.get("href")
-            film_info_tags: List[lxml.html.HtmlElement] = flw_element.cssselect(".film-detail .fd-infor span")
-            extra_details: str = film_info_tags[0].text
-            is_tv: bool = True if film_info_tags[-1].text == "TV" else False
-            yield Film(title,Sol.host_url + link,is_tv,poster_url,extra= extra_details)
+            yield Sol.extract_film_element(flw_element)
 
     @staticmethod
     def parse_latest() -> Iterator[Film]:
@@ -183,14 +201,7 @@ class Sol(ProviderParser):
         trending_movie_elements : List[lxml.html.HtmlElement] = html_doc.cssselect("#trending-movies")
         flw_movie_elements: List[lxml.html.HtmlElement] = trending_movie_elements[0].cssselect(".flw-item")
         for flw_element in flw_movie_elements:
-            poster_url: lxml.html.HtmlElement = flw_element.cssselect(".film-poster > img")[0].get("data-src")
-            link_tag: lxml.html.HtmlElement = flw_element.cssselect(".film-poster > a")[0]
-            title: str = link_tag.get("title")
-            link: str = link_tag.get("href")
-            film_info_tags: List[lxml.html.HtmlElement] = flw_element.cssselect(".film-detail .fd-infor span")
-            extra_details: str = film_info_tags[0].text
-            is_tv: bool = True if film_info_tags[-1].text == "TV" else False
-            yield Film(title,Sol.host_url + link,is_tv,poster_url,extra= extra_details)
+            yield Sol.extract_film_element(flw_element)
 
 
     @staticmethod
@@ -201,14 +212,7 @@ class Sol(ProviderParser):
         trending_show_elements : List[lxml.html.HtmlElement] = html_doc.cssselect("#trending-tv")
         flw_show_elements: List[lxml.html.HtmlElement] = trending_show_elements[0].cssselect(".flw-item")
         for flw_element in flw_show_elements:
-            poster_url: lxml.html.HtmlElement = flw_element.cssselect(".film-poster > img")[0].get("data-src")
-            link_tag: lxml.html.HtmlElement = flw_element.cssselect(".film-poster > a")[0]
-            title: str = link_tag.get("title")
-            link: str = link_tag.get("href")
-            film_info_tags: List[lxml.html.HtmlElement] = flw_element.cssselect(".film-detail .fd-infor span")
-            extra_details: str = film_info_tags[0].text
-            is_tv: bool = True if film_info_tags[-1].text == "TV" else False
-            yield Film(title,Sol.host_url + link,is_tv,poster_url,extra= extra_details)
+            yield Sol.extract_film_element(flw_element)
 
     @staticmethod
     def parse_trending() -> Iterator[Film]:
@@ -228,7 +232,7 @@ class Sol(ProviderParser):
                     film = next(movies_generator)
                     yield film
                 except StopIteration:
-                    more_shows = False
+                    more_movies = False
 
     @staticmethod
     def parse_coming_soon() -> Iterator[Film]:
@@ -238,15 +242,7 @@ class Sol(ProviderParser):
         section_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".section-id-02")
         flw_movie_elements: List[lxml.html.HtmlElement] = section_elements[2].cssselect(".flw-item")
         for flw_element in flw_movie_elements:
-            poster_url: lxml.html.HtmlElement = flw_element.cssselect(".film-poster > img")[0].get("data-src")
-            link_tag: lxml.html.HtmlElement = flw_element.cssselect(".film-poster > a")[0]
-            title: str = link_tag.get("title")
-            link: str = link_tag.get("href")
-            film_info_tags: List[lxml.html.HtmlElement] = flw_element.cssselect(".film-detail .fd-infor span")
-            extra_details: str = film_info_tags[0].text
-            is_tv: bool = True if film_info_tags[-1].text == "TV" else False
-            yield Film(title,Sol.host_url + link,is_tv,poster_url,extra= extra_details)
-
+            yield Sol.extract_film_element(flw_element)
 
     @staticmethod
     def parse_info(url: str) -> FilmInfo:
@@ -284,28 +280,37 @@ class Sol(ProviderParser):
             html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
             search_results: List[lxml.html.HtmlElement] = html_doc.cssselect(".flw-item")
             for search_result in search_results:
-                poster_url: lxml.html.HtmlElement = search_result.cssselect(".film-poster > img")[0].get("data-src")
-                link_tag: lxml.html.HtmlElement = search_result.cssselect(".film-poster > a")[0]
-                title: str = link_tag.get("title")
-                link: str = link_tag.get("href")
-                film_info_tags: List[lxml.html.HtmlElement] = search_result.cssselect(".film-detail .fd-infor span")
-                extra_details: str = film_info_tags[0].text
-                is_tv: bool = True if film_info_tags[-1].text == "TV" else False
-                yield Film(title,Sol.host_url + link,is_tv,poster_url,extra= extra_details)
+                yield Sol.extract_film_element(search_result)
 
     @staticmethod
-    def parse_category(category: str) ->Iterator[Film]:
+    def parse_category(category: str) ->Optional[Iterator[Film]]:
         if(category == "latest"):
             return Sol.parse_latest()
         if(category == "trending"):
             return Sol.parse_trending()
 
-        if(category == "coming"):
+        if(category == "coming soon" or category == "coming"):
             return Sol.parse_coming_soon()
-        raise ValueError("Thats not a valid category")
+        if(category == "movies"):
+            return Sol.parse_movies()
+        if(category == "tv shows"):
+            return Sol.parse_shows()
+        return None
         
     @staticmethod
     def get_available_genres() -> List[str]:
         return List(Sol.genre.keys())
+    @staticmethod
+    def extract_film_element(element: lxml.html.HtmlElement) -> Film:
+        poster_url: lxml.html.HtmlElement = element.cssselect(".film-poster > img")[0].get("data-src")
+        link_tag: lxml.html.HtmlElement = element.cssselect(".film-poster > a")[0]
+        title: str = link_tag.get("title")
+        link: str = link_tag.get("href")
+        film_info_tags: List[lxml.html.HtmlElement] = element.cssselect(".film-detail .fd-infor span")
+        extra_details: str = film_info_tags[0].text
+        is_tv: bool = True if film_info_tags[-1].text == "TV" else False
+        #film_info: FilmInfo = Sol.parse_info(Sol.host_url + link)
 
+        #return Film(title,Sol.host_url + link,is_tv,poster_url,film_info= film_info,extra= extra_details)
+        return Film(title,Sol.host_url + link,is_tv,poster_url,extra= extra_details)
 
