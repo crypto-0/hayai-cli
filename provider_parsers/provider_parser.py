@@ -1,6 +1,8 @@
 from abc import ABC ,abstractmethod
 from typing import Iterator, List, Optional
 from typing import Dict
+
+import requests
 from .extractors.video_extractor import VideoExtractor
 import click
 
@@ -27,11 +29,12 @@ class Season:
 
 
 class Film:
-    def __init__(self,title: str,link: str,is_tv: bool,poster_url: str,film_info: Optional["FilmInfo"] = None,extra: Optional[str] = None) -> None:
+    def __init__(self,title: str,link: str,is_tv: bool,poster_url: str,film_info: Optional["FilmInfo"] = None,extra: Optional[str] = None,poster_data: Optional[bytes] = None) -> None:
         self.title: str = title
         self.link: str = link
         self.is_tv: bool = is_tv
         self.poster_url: str = poster_url
+        self.poster_data: Optional[bytes ] = poster_data
         self.film_info: Optional[FilmInfo] = film_info
         self.extra: Optional[str] = extra
 
@@ -56,7 +59,9 @@ class ProviderParser(ABC):
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML,like Gecko) Chrome/75.0.3770.142 Safari/537.36',
             'X-Requested-With': 'XMLHttpRequest'
             }
+    session: requests.Session = requests.session()
     categories: List[str] = []
+    home_categories: List[str] = []
     genre: Dict[str,str] = {}
     first_color: str = "cyan"
     secondary_color: str = "white"
@@ -83,7 +88,7 @@ class ProviderParser(ABC):
 
     @staticmethod
     @abstractmethod
-    def parse_search(query: str,filter: Optional[Filter] = None) -> Iterator[Film]:
+    def parse_search(query: str,filter: Optional[Filter] = None,fetch_image: bool = True) -> Iterator[Film]:
         pass
 
     @staticmethod
@@ -92,7 +97,7 @@ class ProviderParser(ABC):
         pass
     @staticmethod
     @abstractmethod
-    def parse_category(category: str) ->Iterator[Film]:
+    def parse_category(category: str,fetch_image: bool = False) ->Iterator[Film]:
         pass
     @staticmethod
     def print_films(films: List[Film]) ->None:

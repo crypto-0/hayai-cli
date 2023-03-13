@@ -46,7 +46,8 @@ class Sol(ProviderParser):
             "Show": "tv"
             }
 
-    categories: List[str] = ["latest","trending","coming soon","movies","tv shows" ]
+    categories: List[str] = ["top imdb" ]
+    home_categories: List[str] = ["latest","trending","coming soon"]
     extractors: Dict = {
             "Server UpCloud": UpCloud,
             "UpCloud": UpCloud,
@@ -58,14 +59,14 @@ class Sol(ProviderParser):
     def parse_movie_servers(id: str) -> List[VideoServer]:
         movie_server_url : str = f"{Sol.host_url}/ajax/movie/episodes/"
         server_embed_url: str = f"{Sol.host_url}/ajax/get_link/"
-        r : requests.Response = requests.get(movie_server_url + id,headers=Sol.headers)
+        r : requests.Response = Sol.session.get(movie_server_url + id,headers=Sol.headers)
         html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         server_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".nav-item a")
         servers: List[VideoServer] = [] 
         for server_element in server_elements:
             server_id: str = server_element.get("data-linkid")
             server_title: str = server_element.get("title")
-            r: requests.Response = requests.get(server_embed_url + server_id,headers=Sol.headers)
+            r: requests.Response = Sol.session.get(server_embed_url + server_id,headers=Sol.headers)
             embed: str = r.json()["link"]
             if Sol.extractors.get(server_title) == None:
                 continue
@@ -76,7 +77,7 @@ class Sol(ProviderParser):
     @staticmethod
     def parse_seasons(id: str) -> List[Season]:
         season_url: str = f"{Sol.host_url}/ajax/v2/tv/seasons/" + id
-        r: requests.Response = requests.get(season_url,headers=Sol.headers)
+        r: requests.Response = Sol.session.get(season_url,headers=Sol.headers)
         html_doc: lxml.html.HtmlElement= lxml.html.fromstring(r.text)
         season_elements: List[lxml.html.HtmlElement] = html_doc.cssselect(".dropdown-item")
         seasons: List[Season] =[]
@@ -89,7 +90,7 @@ class Sol(ProviderParser):
     @staticmethod
     def parse_episodes(id: str) -> List[Episode]:
         episodes_url: str = f"{Sol.host_url}/ajax/v2/season/episodes/"
-        r = requests.get(episodes_url + id,headers=Sol.headers)
+        r = Sol.session.get(episodes_url + id,headers=Sol.headers)
         html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         episode_elements:List[lxml.html.HtmlElement] = html_doc.cssselect("a")
         episodes : List[Episode] = []
@@ -105,14 +106,14 @@ class Sol(ProviderParser):
     def parse_episode_servers(id: str) -> List[VideoServer]:
         episodes_server_url : str = f"{Sol.host_url}/ajax/v2/episode/servers/"
         server_embed_url: str = f"{Sol.host_url}/ajax/get_link/"
-        r : requests.Response = requests.get(episodes_server_url + id,headers=Sol.headers)
+        r : requests.Response = Sol.session.get(episodes_server_url + id,headers=Sol.headers)
         html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         server_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".nav-item a")
         servers: List[VideoServer] = [] 
         for server_element in server_elements:
             server_id: str = server_element.get("data-id")
             server_title: str = server_element.get("title")
-            r: requests.Response = requests.get(server_embed_url + server_id,headers=Sol.headers)
+            r: requests.Response = Sol.session.get(server_embed_url + server_id,headers=Sol.headers)
             embed: str = r.json()["link"]
             if Sol.extractors.get(server_title) == None:
                 continue
@@ -121,9 +122,9 @@ class Sol(ProviderParser):
         return servers
 
     @staticmethod
-    def parse_movies() -> Iterator[Film]:
+    def parse_movies(fetch_image: bool = False) -> Iterator[Film]:
         movies_ur: str = f"{Sol.host_url}/movie"
-        r: requests.Response = requests.get(movies_ur + "?page=1",headers=Sol.headers)
+        r: requests.Response = Sol.session.get(movies_ur + "?page=1",headers=Sol.headers)
         html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         last_page_link = html_doc.cssselect(".pagination.pagination-lg a")
         max_page = 1
@@ -131,15 +132,15 @@ class Sol(ProviderParser):
             max_page = int(last_page_link[-1].get("href").rsplit("=",1)[1])
 
         for i in range(1,max_page + 1):
-            r: requests.Response = requests.get(movies_ur + "?page=" + str(i),headers=Sol.headers)
+            r: requests.Response = Sol.session.get(movies_ur + "?page=" + str(i),headers=Sol.headers)
             html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
             movie_results: List[lxml.html.HtmlElement] = html_doc.cssselect(".flw-item")
             for movie_result in movie_results:
-                yield Sol.extract_film_element(movie_result)
+                yield Sol.extract_film_element(movie_result,fetch_image)
     @staticmethod
-    def parse_shows() -> Iterator[Film]:
+    def parse_shows(fetch_image: bool = False) -> Iterator[Film]:
         shows_ur: str = f"{Sol.host_url}/tv-show"
-        r: requests.Response = requests.get(shows_ur + "?page=1",headers=Sol.headers)
+        r: requests.Response = Sol.session.get(shows_ur + "?page=1",headers=Sol.headers)
         html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         last_page_link = html_doc.cssselect(".pagination.pagination-lg a")
         max_page = 1
@@ -147,36 +148,53 @@ class Sol(ProviderParser):
             max_page = int(last_page_link[-1].get("href").rsplit("=",1)[1])
 
         for i in range(1,max_page + 1):
-            r: requests.Response = requests.get(shows_ur + "?page=" + str(i),headers=Sol.headers)
+            r: requests.Response = Sol.session.get(shows_ur + "?page=" + str(i),headers=Sol.headers)
             html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
             show_results: List[lxml.html.HtmlElement] = html_doc.cssselect(".flw-item")
             for show_result in show_results:
-                yield Sol.extract_film_element(show_result)
+                yield Sol.extract_film_element(show_result,fetch_image)
 
     @staticmethod
-    def parse_latest_shows() -> Iterator[Film]:
+    def parse_top_imdb(fetch_image: bool = False) -> Iterator[Film]:
+        shows_ur: str = f"{Sol.host_url}/top-imdb"
+        r: requests.Response = Sol.session.get(shows_ur + "?page=1",headers=Sol.headers)
+        html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
+        last_page_link = html_doc.cssselect(".pagination.pagination-lg a")
+        max_page = 1
+        if len(last_page_link) > 0:
+            max_page = int(last_page_link[-1].get("href").rsplit("=",1)[1])
+
+        for i in range(1,max_page + 1):
+            r: requests.Response = Sol.session.get(shows_ur + "?page=" + str(i),headers=Sol.headers)
+            html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
+            imdb_results: List[lxml.html.HtmlElement] = html_doc.cssselect(".flw-item")
+            for imdb_result in imdb_results:
+                yield Sol.extract_film_element(imdb_result,fetch_image)
+
+    @staticmethod
+    def parse_latest_shows(fetch_image: bool = False) -> Iterator[Film]:
         home_url: str = f"{Sol.host_url}/home"
-        r: requests.Response = requests.get(home_url,headers=Sol.headers)
+        r: requests.Response = Sol.session.get(home_url,headers=Sol.headers)
         html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         section_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".section-id-02")
         flw_show_elements: List[lxml.html.HtmlElement] = section_elements[1].cssselect(".flw-item")
         for flw_element in flw_show_elements:
-            yield Sol.extract_film_element(flw_element)
+            yield Sol.extract_film_element(flw_element,fetch_image)
             
     @staticmethod
-    def parse_latest_movies() -> Iterator[Film]:
+    def parse_latest_movies(fetch_image: bool = False) -> Iterator[Film]:
         home_url: str = f"{Sol.host_url}/home"
-        r: requests.Response = requests.get(home_url,headers=Sol.headers)
+        r: requests.Response = Sol.session.get(home_url,headers=Sol.headers)
         html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         section_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".section-id-02")
         flw_movie_elements: List[lxml.html.HtmlElement] = section_elements[0].cssselect(".flw-item")
         for flw_element in flw_movie_elements:
-            yield Sol.extract_film_element(flw_element)
+            yield Sol.extract_film_element(flw_element,fetch_image)
 
     @staticmethod
-    def parse_latest() -> Iterator[Film]:
-        tv_shows_generator: Iterator[Film] = Sol.parse_latest_shows()
-        movies_generator: Iterator[Film] = Sol.parse_latest_movies()
+    def parse_latest(fetch_image: bool = False) -> Iterator[Film]:
+        tv_shows_generator: Iterator[Film] = Sol.parse_latest_shows(fetch_image)
+        movies_generator: Iterator[Film] = Sol.parse_latest_movies(fetch_image)
         more_shows: bool = True
         more_movies: bool = True
         while(more_shows or more_movies):
@@ -194,30 +212,30 @@ class Sol(ProviderParser):
                     more_movies = False
 
     @staticmethod
-    def parse_trending_movies() -> Iterator[Film]:
+    def parse_trending_movies(fetch_image: bool = False) -> Iterator[Film]:
         home_url: str = f"{Sol.host_url}/home"
-        r: requests.Response = requests.get(home_url,headers=Sol.headers)
+        r: requests.Response = Sol.session.get(home_url,headers=Sol.headers)
         html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         trending_movie_elements : List[lxml.html.HtmlElement] = html_doc.cssselect("#trending-movies")
         flw_movie_elements: List[lxml.html.HtmlElement] = trending_movie_elements[0].cssselect(".flw-item")
         for flw_element in flw_movie_elements:
-            yield Sol.extract_film_element(flw_element)
+            yield Sol.extract_film_element(flw_element,fetch_image)
 
 
     @staticmethod
-    def parse_trending_shows() -> Iterator[Film]:
+    def parse_trending_shows(fetch_image: bool = False) -> Iterator[Film]:
         home_url: str = f"{Sol.host_url}/home"
-        r: requests.Response = requests.get(home_url,headers=Sol.headers)
+        r: requests.Response = Sol.session.get(home_url,headers=Sol.headers)
         html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         trending_show_elements : List[lxml.html.HtmlElement] = html_doc.cssselect("#trending-tv")
         flw_show_elements: List[lxml.html.HtmlElement] = trending_show_elements[0].cssselect(".flw-item")
         for flw_element in flw_show_elements:
-            yield Sol.extract_film_element(flw_element)
+            yield Sol.extract_film_element(flw_element,fetch_image)
 
     @staticmethod
-    def parse_trending() -> Iterator[Film]:
-        tv_shows_generator: Iterator[Film] = Sol.parse_trending_shows()
-        movies_generator: Iterator[Film] = Sol.parse_trending_movies()
+    def parse_trending(fetch_image: bool = False) -> Iterator[Film]:
+        tv_shows_generator: Iterator[Film] = Sol.parse_trending_shows(fetch_image)
+        movies_generator: Iterator[Film] = Sol.parse_trending_movies(fetch_image)
         more_shows: bool = True
         more_movies: bool = True
         while(more_shows or more_movies):
@@ -235,18 +253,18 @@ class Sol(ProviderParser):
                     more_movies = False
 
     @staticmethod
-    def parse_coming_soon() -> Iterator[Film]:
+    def parse_coming_soon(fetch_image: bool = False) -> Iterator[Film]:
         home_url: str = f"{Sol.host_url}/home"
-        r: requests.Response = requests.get(home_url,headers=Sol.headers)
+        r: requests.Response = Sol.session.get(home_url,headers=Sol.headers)
         html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         section_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".section-id-02")
         flw_movie_elements: List[lxml.html.HtmlElement] = section_elements[2].cssselect(".flw-item")
         for flw_element in flw_movie_elements:
-            yield Sol.extract_film_element(flw_element)
+            yield Sol.extract_film_element(flw_element,fetch_image)
 
     @staticmethod
     def parse_info(url: str) -> FilmInfo:
-        r = requests.get(url,headers=Sol.headers)
+        r = Sol.session.get(url,headers=Sol.headers)
         html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         description = html_doc.cssselect(".description")[0].text_content()
         element: lxml.html.HtmlElement = html_doc.cssselect(".row-line")[0]
@@ -256,7 +274,7 @@ class Sol(ProviderParser):
         return FilmInfo(title=title,release=release,description=description.strip(),recommendation=recommendation)
 
     @staticmethod
-    def parse_search( query: str,filter: Optional[Filter] = None) -> Iterator[Film]:
+    def parse_search( query: str,filter: Optional[Filter] = None,fetch_image: bool = False) -> Iterator[Film]:
         query = query.strip().replace(" ","-")
         search_url: str = Sol.host_url + "/search/" + query
         if(filter):
@@ -268,7 +286,7 @@ class Sol(ProviderParser):
             genre_parameter = genre_parameter.strip("-")
             search_url: str = "{host_url}/filter?type={type}&quality=all&release_year=all&genre={genre}&country=all".format(host_url=Sol.host_url,type=type_parameter,genre=genre_parameter)
 
-        r: requests.Response = requests.get(search_url + "?page=1",headers=Sol.headers)
+        r: requests.Response = Sol.session.get(search_url + "?page=1",headers=Sol.headers)
         html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         last_page_link = html_doc.cssselect(".pagination.pagination-lg a")
         max_page = 1
@@ -276,32 +294,37 @@ class Sol(ProviderParser):
             max_page = int(last_page_link[-1].get("href").rsplit("=",1)[1])
 
         for i in range(1,max_page + 1):
-            r: requests.Response = requests.get(search_url + "?page=" + str(i),headers=Sol.headers)
+            r: requests.Response = Sol.session.get(search_url + "?page=" + str(i),headers=Sol.headers)
             html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
             search_results: List[lxml.html.HtmlElement] = html_doc.cssselect(".flw-item")
             for search_result in search_results:
-                yield Sol.extract_film_element(search_result)
+                yield Sol.extract_film_element(search_result,fetch_image)
 
     @staticmethod
-    def parse_category(category: str) ->Optional[Iterator[Film]]:
+    def parse_category(category: str,fetch_image: bool = False) ->Optional[Iterator[Film]]:
         if(category == "latest"):
-            return Sol.parse_latest()
+            return Sol.parse_latest(fetch_image)
         if(category == "trending"):
-            return Sol.parse_trending()
+            return Sol.parse_trending(fetch_image)
 
         if(category == "coming soon" or category == "coming"):
-            return Sol.parse_coming_soon()
+            return Sol.parse_coming_soon(fetch_image)
+
         if(category == "movies"):
-            return Sol.parse_movies()
+            return Sol.parse_movies(fetch_image)
+
         if(category == "tv shows"):
-            return Sol.parse_shows()
+            return Sol.parse_shows(fetch_image)
+
+        if(category == "top imdb"):
+            return Sol.parse_top_imdb(fetch_image)
         return None
         
     @staticmethod
     def get_available_genres() -> List[str]:
         return List(Sol.genre.keys())
     @staticmethod
-    def extract_film_element(element: lxml.html.HtmlElement) -> Film:
+    def extract_film_element(element: lxml.html.HtmlElement,fetch_image = False) -> Film:
         poster_url: lxml.html.HtmlElement = element.cssselect(".film-poster > img")[0].get("data-src")
         link_tag: lxml.html.HtmlElement = element.cssselect(".film-poster > a")[0]
         title: str = link_tag.get("title")
@@ -309,8 +332,8 @@ class Sol(ProviderParser):
         film_info_tags: List[lxml.html.HtmlElement] = element.cssselect(".film-detail .fd-infor span")
         extra_details: str = film_info_tags[0].text
         is_tv: bool = True if film_info_tags[-1].text == "TV" else False
-        #film_info: FilmInfo = Sol.parse_info(Sol.host_url + link)
+        r: requests.Response = Sol.session.get(poster_url,headers=Sol.headers)
+        poster_data  = r.content
 
-        #return Film(title,Sol.host_url + link,is_tv,poster_url,film_info= film_info,extra= extra_details)
-        return Film(title,Sol.host_url + link,is_tv,poster_url,extra= extra_details)
+        return Film(title,Sol.host_url + link,is_tv,poster_url,extra= extra_details,poster_data=poster_data)
 
