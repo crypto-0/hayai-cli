@@ -1,7 +1,7 @@
 click==8.0.4
 httpx==0.23.3
-provider_parsers.egg==info
 pycryptodomex==3.17
+@ git+https://github.com/crypto-0/provider-parsers
 regex==2022.3.15
 tqdm==4.62.3
 yarl==1.7.2

@@ -1,7 +1,7 @@
 from itertools import islice
 import pathlib
 import sys
-from typing import Dict, Iterator
+from typing import Dict, Iterator, Optional
 from typing import List
 
 import click
@@ -26,11 +26,11 @@ def sol_cli():
 @click.option("-e", "--episode_ranges",help="select range of episodes",type=(int, int),multiple=True)
 @click.option("-q", "--quality",help="select quality if available")
 @click.option("-d", "--dir",help="download directory",default = ".")
-@click.option("-p", "--page",help="up to what pages to show at once",type=int,default = 1)
-def download_cmd(query:str,index,season,episode_ranges,quality,dir,page):
+@click.option("-b", "--batch",help="up to how many films to show at once at once",type=int,default = 15)
+def download_cmd(query:str,index,season,episode_ranges,quality,dir,batch):
     color = "blue"
     search_films_iterator: Iterator[Film] = Sol.parse_search(query=query)
-    all_films: List[Film] = list(islice(search_films_iterator,10))
+    all_films: List[Film] = list(islice(search_films_iterator,batch))
     if len(all_films) == 0:
         click.secho("No search results were found",fg="red")
         sys.exit()
@@ -116,25 +116,47 @@ def download_cmd(query:str,index,season,episode_ranges,quality,dir,page):
 
 @sol_cli.command(name="search",help="search for movies or shows")
 @click.argument("query",required=True)
-def search_cmd(query:str):
+@click.option("-b", "--batch",help="up to how many films to show at once at once",type=int,default = 15)
+def search_cmd(query:str,batch: int):
     search_films_iterator: Iterator[Film] = Sol.parse_search(query=query)
-    all_films: List[Film] = list(islice(search_films_iterator,20))
+    all_films: List[Film] = list(islice(search_films_iterator,batch))
     Sol.print_films(all_films)
     
 @sol_cli.command(name="latest",help="Show latest movies or shows")
-def latest_cmd():
-    latest_films_iterator: Iterator[Film] = Sol.parse_category("latest")
-    all_films: List[Film] = list(islice(latest_films_iterator,20))
+@click.option("-b", "--batch",help="up to how many films to show at once at once",type= int,default = 15)
+def latest_cmd(batch: int):
+    latest_films_iterator: Optional[Iterator[Film]] = Sol.parse_category("latest")
+    if latest_films_iterator is None:
+        click.secho("No results were found",fg="red")
+        return
+    all_films: List[Film] = list(islice(latest_films_iterator,batch))
+    if len(all_films) == 0:
+        click.secho("No results were found",fg="red")
+        return
     Sol.print_films(all_films)
     
 @sol_cli.command(name="trending",help="Show trending movies or shows")
-def trending_cmd():
-    trending_films_iterator: Iterator[Film] = Sol.parse_category("trending")
-    all_films: List[Film] = list(islice(trending_films_iterator,20))
+@click.option("-b", "--batch",help="up to how many films to show at once at once",type=int,default = 15)
+def trending_cmd(batch: int):
+    trending_films_iterator: Optional[Iterator[Film]] = Sol.parse_category("trending")
+    if trending_films_iterator is None:
+        click.secho("No results were found",fg="red")
+        return
+    all_films: List[Film] = list(islice(trending_films_iterator,batch))
+    if len(all_films) == 0:
+        click.secho("No results were found",fg="red")
+        return
     Sol.print_films(all_films)
 
 @sol_cli.command(name="coming",help="Show coming movies or shows")
-def coming_cmd():
-    coming_films_iterator: Iterator[Film] = Sol.parse_category("coming")
+@click.option("-b", "--batch",help="up to how many films to show at once at once",type=int,default = 15)
+def coming_cmd(batch: int):
+    coming_films_iterator: Optional[Iterator[Film]] = Sol.parse_category("coming")
+    if coming_films_iterator is None:
+        click.secho("No results were found",fg="red")
+        return
     all_films: List[Film] = list(islice(coming_films_iterator,30))
+    if len(all_films) == 0:
+        click.secho("No results were found",fg="red")
+        return
     Sol.print_films(all_films)
