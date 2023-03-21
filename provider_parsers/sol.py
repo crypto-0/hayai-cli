@@ -97,7 +97,7 @@ class Sol(ProviderParser):
         for episode_element in episode_elements:
             episode_number: str = episode_element.get("title").split(":")[0].split()[-1]
             episode_id = episode_element.get("data-id")
-            episode_title = episode_element.get("title")
+            episode_title = episode_element.get("title").split(":")[-1]
             episodes.append(Episode(episode_number,episode_id,episode_title))
         return episodes
 
@@ -263,15 +263,21 @@ class Sol(ProviderParser):
             yield Sol.extract_film_element(flw_element,fetch_image)
 
     @staticmethod
-    def parse_info(url: str) -> FilmInfo:
+    def parse_info(url: str,fetch_image: bool = False) -> FilmInfo:
         r = Sol.session.get(url,headers=Sol.headers)
         html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         description = html_doc.cssselect(".description")[0].text_content()
-        element: lxml.html.HtmlElement = html_doc.cssselect(".row-line")[0]
-        release = element.text_content().split("Released: ")[-1].strip()
+        elements: lxml.html.HtmlElement = html_doc.cssselect(".row-line")
+        release = elements[0].text_content().split("Released: ")[-1].strip()
+        genre: str = elements[1].cssselect("a")[0].text
+        duration: str = elements[3].text_content().split("Duration: ")[-1].split()[0].strip()
+        country: str = elements[4].cssselect("a")[0].text.strip()
         title = url.split("watch-")[-1].split("-free")[0].replace("-"," ")
-        recommendation: list[Film] = []
-        return FilmInfo(title=title,release=release,description=description.strip(),recommendation=recommendation)
+        recommendation_results: List[lxml.html.HtmlElement] = html_doc.cssselect(".flw-item")
+        recommendations: List[Film] = []
+        for recommendation_result in recommendation_results:
+            recommendations.append(Sol.extract_film_element(recommendation_result,fetch_image=fetch_image))
+        return FilmInfo(title=title,release=release,description=description.strip(),genre=genre,country=country,duration=duration,recommendation=recommendations)
 
     @staticmethod
     def parse_search( query: str,filter: Optional[Filter] = None,fetch_image: bool = False) -> Iterator[Film]:
@@ -332,8 +338,10 @@ class Sol(ProviderParser):
         film_info_tags: List[lxml.html.HtmlElement] = element.cssselect(".film-detail .fd-infor span")
         extra_details: str = film_info_tags[0].text
         is_tv: bool = True if film_info_tags[-1].text == "TV" else False
-        r: requests.Response = Sol.session.get(poster_url,headers=Sol.headers)
-        poster_data  = r.content
+        poster_data = None
+        if fetch_image:
+            r: requests.Response = Sol.session.get(poster_url,headers=Sol.headers)
+            poster_data  = r.content
 
         return Film(title,Sol.host_url + link,is_tv,poster_url,extra= extra_details,poster_data=poster_data)
 

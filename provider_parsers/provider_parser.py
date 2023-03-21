@@ -40,10 +40,13 @@ class Film:
 
 
 class FilmInfo:
-    def __init__(self,title: str,release: str,description: str,recommendation: List[Film]) -> None:
+    def __init__(self,title: str,release: str,description: str,genre: str, country: str, duration: str,recommendation: List[Film]) -> None:
         self.title: str = title
         self.release: str = release
         self.description: str = description
+        self.genre: str = genre
+        self.country: str = country
+        self.duration: str = duration
         self.recommendation: List[Film] = recommendation
 
 class Filter:
