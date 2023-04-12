@@ -1,75 +1,83 @@
-from provider_parsers import VideoServer
-from provider_parsers import Season
-from provider_parsers import Episode
-from provider_parsers import Sol
-from provider_parsers import Film
-from provider_parsers.extractors.video_extractor import VideoContainer
-from typing import Iterator, Optional
+from providers import VideoServer
+from providers import Season
+from providers import Episode
+from providers.extractors.video_extractor import VideoContainer
 from typing import List
-from itertools import islice
 import unittest
 
-from provider_parsers.provider_parser import FilmInfo
+from providers import FilmInfo
+from providers.provider import Page
+from providers.sol import Sol
 
 class TestSol(unittest.TestCase):
 
     def test_parsing_servers(self):
+        sol: Sol = Sol()
         #blackadams
-        movie_servers: List[VideoServer] = Sol.parse_movie_servers("82087")
+        movie_servers: List[VideoServer] = sol.get_movie_servers("82087")
 
         #wednesday show
-        seasons: List[Season] = Sol.parse_seasons("90553")
-        self.assertIsNotNone(movie_servers)
-        self.assertIsNotNone(seasons)
+        seasons: List[Season] = sol.get_seasons("90553")
         self.assertGreater(len(movie_servers),0)
         self.assertGreater(len(seasons),0)
 
-        episodes: List[Episode] = Sol.parse_episodes(seasons[0].id)
-        self.assertIsNotNone(episodes)
+        episodes: List[Episode] = sol.get_episodes(seasons[0].id)
         self.assertGreater(len(episodes),0)
-        episode_servers: List[VideoServer] = Sol.parse_episode_servers(episodes[0].id)
-        self.assertIsNotNone(episode_servers)
+        episode_servers: List[VideoServer] = sol.get_episode_servers(episodes[0].id)
         self.assertGreater(len(episode_servers),0)
-        self.assertIsNotNone(episode_servers[0].extractor)
-        container: VideoContainer = episode_servers[0].extractor.extract(episode_servers[0].embed)
+        container: VideoContainer = sol.extract_server(episode_servers[0].name,episode_servers[0].embed)
         self.assertGreater(len(container.videos),0)
         self.assertGreater(len(container.subtitles),0)
 
     def test_parsing_catogories(self):
+        sol: Sol = Sol()
 
-        latest_shows_generator: Iterator[Film] = Sol.parse_latest_shows()
-        latest_shows: List[Film] = list(islice(latest_shows_generator,6))
-        self.assertGreater(len(latest_shows),5);
+        """
+        latest_shows_page: Page = sol.get_category("latest shows")
+        self.assertGreater(len(latest_shows_page.films),5);
+        self.assertFalse(latest_shows_page.pageInfo.has_next_page)
+        self.assertEqual(latest_shows_page.pageInfo.current_page,1)
+        self.assertEqual(latest_shows_page.pageInfo.last_page,1)
 
-        latest_movies_generator: Iterator[Film] = Sol.parse_latest_movies()
-        latest_movies: List[Film] = list(islice(latest_movies_generator,6))
-        self.assertGreater(len(latest_movies),5)
+        latest_movies_page: Page = sol.get_category("latest movies")
+        self.assertGreater(len(latest_movies_page.films),5);
+        self.assertFalse(latest_movies_page.pageInfo.has_next_page)
+        self.assertEqual(latest_movies_page.pageInfo.current_page,1)
+        self.assertEqual(latest_movies_page.pageInfo.last_page,1)
 
-        search_generator = Sol.parse_search("wed")
-        search_results: List[Film] = list(islice(search_generator,6))
-        self.assertGreater(len(search_results),5)
+        trending_show_page: Page = sol.get_category("trending shows")
+        self.assertGreater(len(trending_show_page.films),5);
+        self.assertFalse(trending_show_page.pageInfo.has_next_page)
+        self.assertEqual(trending_show_page.pageInfo.current_page,1)
+        self.assertEqual(trending_show_page.pageInfo.last_page,1)
 
-        trending_movies_generator: Iterator[Film]= Sol.parse_trending_movies()
-        trending_movies = list(islice(trending_movies_generator,6))
-        self.assertGreater(len(trending_movies),5)
+        trending_movies_page: Page = sol.get_category("trending movies")
+        self.assertGreater(len(trending_movies_page.films),5);
+        self.assertFalse(trending_movies_page.pageInfo.has_next_page)
+        self.assertEqual(trending_movies_page.pageInfo.current_page,1)
+        self.assertEqual(trending_movies_page.pageInfo.last_page,1)
 
-        trending_shows_generator: Iterator[Film]= Sol.parse_trending_shows()
-        trending_shows: List[Film] = list(islice(trending_shows_generator,6))
-        self.assertGreater(len(trending_shows),5)
+        coming_soon_page: Page = sol.get_category("coming soon")
+        self.assertGreater(len(coming_soon_page.films),5);
+        self.assertFalse(coming_soon_page.pageInfo.has_next_page)
+        self.assertEqual(coming_soon_page.pageInfo.current_page,1)
+        self.assertEqual(coming_soon_page.pageInfo.last_page,1)
 
-        movies_generator: Iterator[Film]= Sol.parse_movies()
-        movies: List[Film] = list(islice(movies_generator,6))
-        self.assertGreater(len(movies),5)
+        imdb_page: Page = sol.get_category("top imdb")
+        self.assertGreater(len(imdb_page.films),5);
+        self.assertTrue(imdb_page.pageInfo.has_next_page)
+        self.assertEqual(imdb_page.pageInfo.current_page,1)
+        self.assertGreater(imdb_page.pageInfo.last_page,1)
 
-        shows_generator: Iterator[Film]= Sol.parse_shows()
-        shows: List[Film] = list(islice(shows_generator,6))
-        self.assertGreater(len(shows),5)
+        
+        not_valid_page: Page = sol.get_category("this is not valid")
+        self.assertEqual(len(not_valid_page.films),0);
+        self.assertFalse(not_valid_page.pageInfo.has_next_page)
+        self.assertEqual(not_valid_page.pageInfo.current_page,1)
+        self.assertEqual(not_valid_page.pageInfo.last_page,1)
 
-        parse_category_generator: Optional[Iterator[Film]] = Sol.parse_category("coming soon")
-        if parse_category_generator is not None:
-            coming_soon_category: List[Film] = list(islice(parse_category_generator,6))
-            self.assertEqual(coming_soon_category[-1].title,coming_soon_category[-1].title)
-            info: FilmInfo = Sol.parse_info("https://solarmovie.pe/movie/watch-avatar-free-19690")
-            self.assertEqual(info.title,"avatar")
-            self.assertEqual(info.description,"In the 22nd century, a paraplegic Marine is dispatched to the moon Pandora on a unique mission, but becomes torn between following orders and protecting an alien civilization.")
-            self.assertEqual(info.release,"2009-12-10")
+        info: FilmInfo = sol.get_film_info("https://solarmovie.pe/movie/watch-avatar-free-19690")
+        self.assertEqual(info.title,"avatar")
+        self.assertEqual(info.description,"In the 22nd century, a paraplegic Marine is dispatched to the moon Pandora on a unique mission, but becomes torn between following orders and protecting an alien civilization.")
+        self.assertEqual(info.release,"2009-12-10")
+        """
