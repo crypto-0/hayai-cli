@@ -1,5 +1,5 @@
 from abc import ABC ,abstractmethod
-from typing import  List 
+from typing import  List
 from dataclasses import dataclass, field
 from .extractors import VideoContainer
 import click
@@ -23,7 +23,7 @@ class Season:
     id: str
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True,eq=True)
 class Film:
     title: str
     link: str
@@ -40,6 +40,8 @@ class FilmInfo:
     country: str = ""
     duration: str = ""
     recommendation: List[Film] = field(default_factory=list,compare=False,repr=False,hash=False)
+    poster_image: bytes = field(default_factory=bytes)
+
 @dataclass(frozen=True)
 class PageInfo:
     current_page: int = 1
@@ -59,37 +61,32 @@ class Provider(ABC):
     _first_color: str = "cyan"
     _secondary_color: str = "white"
 
-    @abstractmethod
-    def get_seasons(self,id: str) -> List[Season]:
+    def load_seasons(self,id: str) -> List[Season]:
         raise NotImplemented
 
     @abstractmethod
-    def get_episodes(self,id: str) -> List[Episode]:
+    def load_episodes(self,id: str) -> List[Episode]:
         raise NotImplemented
 
     @abstractmethod
-    def get_movie_servers(self,id: str) -> List[VideoServer]:
+    def load_movie_servers(self,id: str) -> List[VideoServer]:
         raise NotImplemented
 
     @abstractmethod
-    def get_episode_servers(self,id: str) -> List[VideoServer]:
+    def load_episode_servers(self,id: str) -> List[VideoServer]:
         raise NotImplemented
 
 
     @abstractmethod
-    def get_film_info(self,url: str) -> FilmInfo:
+    def load_film_info(self,url: str) -> FilmInfo:
         raise NotImplemented
 
     @abstractmethod
-    def get_poster_image(self,url: str) -> bytes:
+    def load_poster_image(self,url: str) -> bytes:
         raise NotImplemented
 
     @abstractmethod
-    def get_category(self,category: str,page_number: int = 1) -> Page:
-        raise NotImplemented
-
-    @abstractmethod
-    def search(self,query: str,page_number: int = 1) -> Page :
+    def load_search(self,query: str,page_number: int = 1) -> Page :
         raise NotImplemented
 
     @abstractmethod
