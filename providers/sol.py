@@ -8,30 +8,19 @@ from .extractors.vidcloud import *
 
 class Sol(Provider):
     _host_url: str = "https://solarmovie.pe"
-    _available_general_categories: set[str] = {"top imdb"}
-    _available_home_categories: List[str] = [ "latest movies","latest shows","trending movies","trending shows","coming soon" ]
     _extractors: Dict = {
-            "Server UpCloud": UpCloud(),
-            "UpCloud": UpCloud(),
-            "Server Vidcloud": Vidcloud(),
-            "Vidcloud": Vidcloud()
+            "Server UpCloud": UpCloud("https://dokicloud.one/ajax/embed-4/getSources?id="),
+            "UpCloud": UpCloud("https://dokicloud.one/ajax/embed-4/getSources?id="),
+            "Server Vidcloud": Vidcloud("https://rabbitstream.net/ajax/embed-4/getSources?id="),
+            "Vidcloud": Vidcloud("https://rabbitstream.net/ajax/embed-4/getSources?id=")
             }
     def __init__(self) -> None:
         super().__init__()
 
-
-    @property
-    def available_general_categories(self):
-        return self._available_general_categories
-
-    @property
-    def available_home_categories(self):
-        return self._available_home_categories
-
-    def load_movie_servers(self,id: str) -> List[VideoServer]:
+    def load_movie_servers(self,movie_id: str) -> List[VideoServer]:
         movie_server_url : str = f"{self._host_url}/ajax/movie/episodes/"
         server_embed_url: str = f"{self._host_url}/ajax/get_link/"
-        r : requests.Response = requests.get(movie_server_url + id,headers=self._headers)
+        r : requests.Response = requests.get(movie_server_url + movie_id,headers=self._headers)
         html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         server_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".nav-item a")
         servers: List[VideoServer] = [] 
@@ -43,8 +32,8 @@ class Sol(Provider):
             servers.append(VideoServer(server_title,embed))
         return servers
 
-    def load_seasons(self,id: str) -> List[Season]:
-        season_url: str = f"{self._host_url}/ajax/v2/tv/seasons/" + id
+    def load_seasons(self,film_id: str) -> List[Season]:
+        season_url: str = f"{self._host_url}/ajax/v2/tv/seasons/" + film_id
         r: requests.Response = requests.get(season_url,headers=self._headers)
         html_doc: lxml.html.HtmlElement= lxml.html.fromstring(r.text)
         season_elements: List[lxml.html.HtmlElement] = html_doc.cssselect(".dropdown-item")
@@ -55,9 +44,9 @@ class Sol(Provider):
             seasons.append(Season(season_number,season_id))
         return seasons
 
-    def load_episodes(self,id: str) -> List[Episode]:
+    def load_episodes(self,season_id: str) -> List[Episode]:
         episodes_url: str = f"{self._host_url}/ajax/v2/season/episodes/"
-        r = requests.get(episodes_url + id,headers=self._headers)
+        r = requests.get(episodes_url + season_id,headers=self._headers)
         html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         episode_elements:List[lxml.html.HtmlElement] = html_doc.cssselect("a")
         episodes : List[Episode] = []
@@ -68,11 +57,11 @@ class Sol(Provider):
             episodes.append(Episode(episode_number,episode_title,episode_id))
         return episodes
 
-    def load_episode_servers(self,id: str) -> List[VideoServer]:
+    def load_episode_servers(self,episode_id: str) -> List[VideoServer]:
         episodes_server_url : str = f"{self._host_url}/ajax/v2/episode/servers/"
         server_embed_url: str = f"{self._host_url}/ajax/get_link/"
         try:
-            r : requests.Response = requests.get(episodes_server_url + id,headers=self._headers)
+            r : requests.Response = requests.get(episodes_server_url + episode_id,headers=self._headers)
             r.raise_for_status()
             html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
             server_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".nav-item a")

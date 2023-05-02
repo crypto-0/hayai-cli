@@ -1,26 +1,25 @@
-from abc import ABC ,abstractmethod
+from abc import ABC 
 from typing import  List
 from dataclasses import dataclass, field
-from .extractors import VideoContainer
 import click
 
 @dataclass(frozen=True)
 class VideoServer:
     name: str
-    embed: str
+    server_id: str
 
 
 @dataclass(frozen=True)
 class Episode:
     episode_number: str 
     title: str 
-    id: str 
+    episode_id: str 
 
 
 @dataclass(frozen=True)
 class Season:
     season_number: str
-    id: str
+    season_id: str
 
 
 @dataclass(frozen=True,eq=True)
@@ -50,7 +49,7 @@ class PageInfo:
 
 @dataclass(frozen=True)
 class Page:
-    pageInfo: PageInfo 
+    page_info: PageInfo 
     films: List
 
 class Provider(ABC):
@@ -61,37 +60,6 @@ class Provider(ABC):
     _first_color: str = "cyan"
     _secondary_color: str = "white"
 
-    def load_seasons(self,id: str) -> List[Season]:
-        raise NotImplemented
-
-    @abstractmethod
-    def load_episodes(self,id: str) -> List[Episode]:
-        raise NotImplemented
-
-    @abstractmethod
-    def load_movie_servers(self,id: str) -> List[VideoServer]:
-        raise NotImplemented
-
-    @abstractmethod
-    def load_episode_servers(self,id: str) -> List[VideoServer]:
-        raise NotImplemented
-
-
-    @abstractmethod
-    def load_film_info(self,url: str) -> FilmInfo:
-        raise NotImplemented
-
-    @abstractmethod
-    def load_poster_image(self,url: str) -> bytes:
-        raise NotImplemented
-
-    @abstractmethod
-    def load_search(self,query: str,page_number: int = 1) -> Page :
-        raise NotImplemented
-
-    @abstractmethod
-    def extract_server(self,server_name,embed: str) -> VideoContainer:
-        raise NotImplemented
 
     @staticmethod
     def print_films(films: List[Film]) ->None:
