@@ -6,7 +6,7 @@
   <h3 align="center">HAYAI-CLI</h3>
 
   <p align="center">
-    An awesome Application to download movies or shows !
+    An awesome Application to download/play movies or shows !
     <br />
     <a href="#demo">View Demo</a>
     ·
@@ -43,12 +43,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-This is movies or tv show downloader Application that will scrape solarmovie.pe and download movies and tv shows
-
-Here's why I took on this challenge:
-* learn how to use the lowest level scrapping library on python which is lxml
-* learn how to reverse enginner websites that have obscure javascript and trace network calls
-* learn how to properly split my programs into multiple python packages and also follow a proper folder structure
+This is movies or tv show stream/downloader Application that will scrape streaming services like solarmovie.pe 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -72,7 +67,7 @@ $ pip install .
 <!-- USAGE EXAMPLES -->
 ## Usage
 ```sh
-Usage:hayai_cli sol [OPTIONS] COMMAND [ARGS]...
+Usage: python -m hayai_cli sol [OPTIONS] COMMAND [ARGS]...
 
   solarmovie provider
 
@@ -80,37 +75,28 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  coming    Show coming movies or shows
-  download  download movies or shows
-  latest    Show latest movies or shows
+  movies    Show movies
   search    search for movies or shows
-  trending  Show trending movies or shows
+  shows     Show shows
+  top imdb  Show top imbd movies or shows
 ```
 ### provider category commands
-Each provider has specific categories that can be query such advance search, showing the latest shows or movies, or preview what is comming
-* The **download** option will download movie or tv shows episodes to your local machine
-* The **Other category** commands will send a query for  movies or tv shows and allow you to browse what they have to offer
+Each provider has specific categories that can be query such search, showing the latest shows or movies, what is trending, etc
+* The **category** commands will send a query for  movies or tv shows and allow you to browse what they have to offer
 ### h / --help argument
 This argument is used to get help if lost or don't know what to do and will exist the application after
 
-### -i / --index argument
-This argument is used by download to automatically select the search result
+### -m / --mode
+This argument is used by all category to specifie if to play or download
 
-### --s / --season
-This argument is used by download to automatically select the provided season if it is a tv show and is within range of number of seasons
+### -p / --page
+This argument is used by all category except home to get the specific page such page 5 of trending category
 
-### --q / --quality
-This argument is used by download to automatically try to download the provided quality if it exist
+### -q / --quality
+This argument is used by all category to get the specified quality of a stream
 
-### --d / --dir
-This argument is used by download to download movies or tv shows episodes to that given location
-### --e / --episode_ranges
-This argument is used by download to automatically select the provided episodes range if it is a tv show and is within range of number of episodes
-* 1 will be treated as a singular range from 1 to 1.
-* 1-2 will be treated as a range from 1 to 2.
-* 1-2,6-9 will be treated as two different checks. The first check will be from 1 to 2, the second from 6 to 9.
-### -b / --batch argument
-This argument is used by all categories to choose how many films can be show all at once
+### -d / --dir
+This argument is used by all category to specifie which directory to download 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Demo
