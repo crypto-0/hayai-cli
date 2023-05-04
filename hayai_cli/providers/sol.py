@@ -17,21 +17,6 @@ class Sol(Provider):
     def __init__(self) -> None:
         super().__init__()
 
-    def load_movie_servers(self,movie_id: str) -> List[VideoServer]:
-        movie_server_url : str = f"{self._host_url}/ajax/movie/episodes/"
-        server_embed_url: str = f"{self._host_url}/ajax/get_link/"
-        r : requests.Response = requests.get(movie_server_url + movie_id,headers=self._headers)
-        html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
-        server_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".nav-item a")
-        servers: List[VideoServer] = [] 
-        for server_element in server_elements:
-            server_id: str = server_element.get("data-linkid")
-            server_title: str = server_element.get("title")
-            r: requests.Response = requests.get(server_embed_url + server_id,headers=self._headers)
-            embed: str = r.json()["link"]
-            servers.append(VideoServer(server_title,embed))
-        return servers
-
     def load_seasons(self,film_id: str) -> List[Season]:
         season_url: str = f"{self._host_url}/ajax/v2/tv/seasons/" + film_id
         r: requests.Response = requests.get(season_url,headers=self._headers)
@@ -59,7 +44,6 @@ class Sol(Provider):
 
     def load_episode_servers(self,episode_id: str) -> List[VideoServer]:
         episodes_server_url : str = f"{self._host_url}/ajax/v2/episode/servers/"
-        server_embed_url: str = f"{self._host_url}/ajax/get_link/"
         try:
             r : requests.Response = requests.get(episodes_server_url + episode_id,headers=self._headers)
             r.raise_for_status()
@@ -69,20 +53,37 @@ class Sol(Provider):
             for server_element in server_elements:
                 server_id: str = server_element.get("data-id")
                 server_title: str = server_element.get("title")
-                r: requests.Response = requests.get(server_embed_url + server_id,headers=self._headers)
-                embed: str = r.json()["link"]
                 if self._extractors.get(server_title) == None:
                     continue
-                servers.append(VideoServer(server_title,embed))
+                servers.append(VideoServer(server_title,server_id))
             return servers
         except Exception as e:
             return []
 
-    def extract_server(self, server_name, embed: str) -> VideoContainer:
-        extractor: Optional[VideoExtractor] = self._extractors.get(server_name)
-        if extractor:
-            return extractor.extract(embed)
-        return VideoContainer()
+    def load_movie_servers(self,movie_id: str) -> List[VideoServer]:
+        movie_server_url : str = f"{self._host_url}/ajax/movie/episodes/"
+        r : requests.Response = requests.get(movie_server_url + movie_id,headers=self._headers)
+        html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
+        server_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".nav-item a")
+        servers: List[VideoServer] = [] 
+        for server_element in server_elements:
+            server_id: str = server_element.get("data-linkid")
+            server_title: str = server_element.get("title")
+            servers.append(VideoServer(server_title,server_id))
+        return servers
+
+    def load_video(self,server: VideoServer):
+        server_embed_url: str = f"{self._host_url}/ajax/get_link/{server.server_id}"
+        try:
+            r: requests.Response = requests.get(server_embed_url,headers=self._headers)
+            embed: str = r.json()["link"]
+            extractor: Optional[VideoExtractor] = self._extractors.get(server.name)
+            if extractor is not None:
+                return extractor.extract(embed)
+            return VideoContainer([],[])
+        except Exception as e:
+            return VideoContainer([],[])
+
 
     def load_home(self):
         url = f"{self._host_url}/home"
@@ -174,6 +175,7 @@ class Sol(Provider):
         description = html_doc.cssselect(".description")[0].text_content()
         elements: lxml.html.HtmlElement = html_doc.cssselect(".row-line")
         release = elements[0].text_content().split("Released: ")[-1].strip()
+        release = release.split("-")[0]
         genre: str = elements[1].cssselect("a")[0].text
         duration: str = elements[3].text_content().split("Duration: ")[-1].split()[0].strip()
         country: str = elements[4].cssselect("a")[0].text.strip()
@@ -197,8 +199,12 @@ class Sol(Provider):
         extra_details = extra_details.strip()
         extra_details = extra_details.strip("  .  ")
         is_tv: bool = True if film_info_tags[-1].text == "TV" else False
+        if is_tv:
+            film_type: str = "tv"
+        else:
+            film_type: str = "movie"
 
-        return Film(title,self._host_url + link,is_tv,poster_url=poster_url,extra= extra_details)
+        return Film(title,self._host_url + link,film_type,poster_url=poster_url,extra= extra_details)
 
     def parse_pagination_elements(self,elements: List[lxml.html.HtmlElement]) -> PageInfo:
         current_page: int = 1

@@ -17,8 +17,11 @@ class Zoro(Provider):
         super().__init__()
 
 
-    def load_episodes(self,id: str) -> List[Episode]:
-        episodes_url: str = f"{self._host_url}/ajax/v2/episode/list/{id}"
+    def load_seasons(self, film_id: str) -> List[Season]:
+        return [Season("1",film_id)]
+
+    def load_episodes(self,season_id: str) -> List[Episode]:
+        episodes_url: str = f"{self._host_url}/ajax/v2/episode/list/{season_id}"
         try:
             r = requests.get(episodes_url,headers=self._headers)
             html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.json().get("html"))
@@ -33,10 +36,10 @@ class Zoro(Provider):
         except Exception as e:
             return []
 
-    def load_episode_servers(self,episode_id: str) -> List[VideoServer]:
-        episodes_server_url : str = f"{self._host_url}/ajax/v2/episode/servers?episodeId={episode_id}"
+    def load_servers(self,ID: str) -> List[VideoServer]:
+        server_url : str = f"{self._host_url}/ajax/v2/episode/servers?episodeId={ID}"
         try:
-            r : requests.Response = requests.get(episodes_server_url,headers=self._headers)
+            r : requests.Response = requests.get(server_url,headers=self._headers)
             r.raise_for_status()
             html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.json().get("html"))
             server_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".server-item")
@@ -50,6 +53,13 @@ class Zoro(Provider):
             return servers
         except Exception as e:
             return []
+    
+
+    def load_episode_servers(self,episode_id: str) -> List[VideoServer]:
+        return self.load_servers(episode_id)
+
+    def load_movie_servers(self,movie_id: str) -> List[VideoServer]:
+        return self.load_servers(movie_id)
 
     def load_video(self,server: VideoServer):
         server_embed_url: str = f"{self._host_url}/ajax/v2/episode/sources?id={server.server_id}"

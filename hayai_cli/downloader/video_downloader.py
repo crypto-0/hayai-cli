@@ -13,6 +13,9 @@ class VideoDownloader:
         self.num_threads: int = num_threads
         self.session: requests.Session = requests.Session()
 
+    def close_session(self):
+        self.session.close()
+
     def _download_segment(self, url: str, filename: str) -> None:
         retry_count = 0
         while retry_count < 5:
@@ -97,10 +100,10 @@ class VideoDownloader:
                 if os.path.isfile(segment_file_name) and filename.startswith(f"{output_file_name}_segment"):
                     segments_file_names.append(segment_file_name)
             for filename in tqdm(sorted(segments_file_names),desc= f"Combining {output_file_name} segments"):
-                with open(os.path.join(segments_dir, filename), "rb") as segment_file:
+                with open(filename, "rb") as segment_file:
                     f.write(segment_file.read())
-                if filename != output_file_name + ".ts":
-                    os.remove(os.path.join(segments_dir, filename))
+                if not filename.endswith(output_file_name + ".ts"):
+                    os.remove(filename)
 
     def _download_mp4(self, url: str,output_dir: str = ".", output_file_name: Optional[str] = None) -> None:
         if output_file_name is None:
@@ -166,6 +169,7 @@ class VideoDownloader:
         return_code = ffmpeg_process.poll()
         if not return_code:
             os.unlink(file_location)
+        ffmpeg_process.stdout.close()
 
     def download_video(self, url, quality=None,output_dir: str= ".", output_file: Optional[str]=None, start_segment: int=0, end_segment: Optional[int]=None):
         if url.endswith('.m3u8'):

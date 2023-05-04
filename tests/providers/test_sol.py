@@ -25,7 +25,7 @@ class TestSol(unittest.TestCase):
         self.assertGreater(len(episodes),0)
         episode_servers: List[VideoServer] = sol.load_episode_servers(episodes[0].episode_id)
         self.assertGreater(len(episode_servers),0)
-        container: VideoContainer = sol.extract_server(episode_servers[0].name,episode_servers[0].server_id)
+        container: VideoContainer = sol.load_video(episode_servers[0])
         self.assertGreater(len(container.videos),0)
         self.assertGreater(len(container.subtitles),0)
 
