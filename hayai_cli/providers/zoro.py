@@ -161,6 +161,21 @@ class Zoro(Provider):
         films: List[Film] = list(map(self.parse_FLW_element, flw_items))
         return Page(page_info,films)
 
+    def load_search(self,query: str,page_number: int = 1) -> Page :
+        query = query.strip().replace(" ","-")
+        search_url: str = f"{self._host_url}/search?keyword={query}&page={page_number}"
+        try:
+            r: requests.Response = requests.get(search_url,headers=self._headers)
+            r.raise_for_status()
+        except Exception as e:
+            return Page(PageInfo(1,1,False),[])
+        html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
+        pagination_elements: List[lxml.html.HtmlElement] = html_doc.cssselect(".pagination.pagination-lg li")
+        page_info: PageInfo = self.parse_pagination_elements(pagination_elements)
+        flw_items: List[lxml.html.HtmlElement] = html_doc.cssselect(".flw-item")
+        films: List[Film] = list(map(self.parse_FLW_element, flw_items))
+        return Page(page_info,films)
+
     def load_film_info(self,url: str) -> FilmInfo:
         try:
             r = requests.get(url,headers=self._headers)
@@ -185,8 +200,6 @@ class Zoro(Provider):
 
         return FilmInfo(title=title,release=release,description=description.strip(),genre=genre,country=country,duration=duration,recommendation=recommendations,poster_image=poster_image)
 
-    def load_search(self,query: str,page_number: int = 1) -> Page :
-        raise NotImplemented
 
     def parse_FLW_element(self,element: lxml.html.HtmlElement) -> Film:
         poster_url: lxml.html.HtmlElement = element.cssselect(".film-poster > img")[0].get("data-src")
