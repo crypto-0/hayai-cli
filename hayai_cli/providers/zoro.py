@@ -63,13 +63,13 @@ class Zoro(Provider):
 
     def load_video(self,server: VideoServer):
         server_embed_url: str = f"{self._host_url}/ajax/v2/episode/sources?id={server.server_id}"
+        extractor: Optional[VideoExtractor] = self._extractors.get(server.name)
+        if extractor is None:
+            return VideoContainer([],[])
         try:
             r: requests.Response = requests.get(server_embed_url,headers=self._headers)
             embed: str = r.json()["link"]
-            extractor: Optional[VideoExtractor] = self._extractors.get(server.name)
-            if extractor is not None:
-                return extractor.extract(embed)
-            return VideoContainer([],[])
+            return extractor.extract(embed)
         except Exception as e:
             return VideoContainer([],[])
 
@@ -81,6 +81,7 @@ class Zoro(Provider):
             r: requests.Response = requests.get(url,headers=self._headers)
             r.raise_for_status()
         except Exception as e:
+            print(e)
             return Page(PageInfo(),[])
         html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
         section_block_area_home_elements: lxml.html.HtmlElement = html_doc.cssselect(".block_area.block_area_home")
@@ -161,7 +162,28 @@ class Zoro(Provider):
         return Page(page_info,films)
 
     def load_film_info(self,url: str) -> FilmInfo:
-        raise NotImplemented
+        try:
+            r = requests.get(url,headers=self._headers)
+            r.raise_for_status()
+        except Exception as e:
+            return FilmInfo()
+        html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
+        item_titles_elements: List[lxml.html.HtmlElement] = html_doc.cssselect(".item.item-title")
+        description = item_titles_elements[0].cssselect(".text")[0].text.strip()
+        country: str = "japanese"
+        release = item_titles_elements[3].cssselect(".name")[0].text.split("to")[0].strip()
+        release = release.rsplit(",",1)[-1].strip()
+        duration: str = item_titles_elements[5].cssselect(".name")[0].text.strip("m")
+        anisc_detail_elements: List[lxml.html.HtmlElement] = html_doc.cssselect(".anisc-detail")
+        bread_crumbs_elements: List[lxml.html.HtmlElement] = anisc_detail_elements[0].cssselect(".breadcrumb-item")
+        title = bread_crumbs_elements[2].text.strip("!")
+        flw_items: List[lxml.html.HtmlElement] = html_doc.cssselect(".flw-item")
+        recommendations: List[Film] = list(map(self.parse_FLW_element,flw_items))
+        poster_url:str = html_doc.cssselect(".anisc-poster .film-poster-img")[0].get("src")
+        poster_image: bytes = bytes()
+        genre: str = html_doc.cssselect(".item.item-list a")[0].text
+
+        return FilmInfo(title=title,release=release,description=description.strip(),genre=genre,country=country,duration=duration,recommendation=recommendations,poster_image=poster_image)
 
     def load_search(self,query: str,page_number: int = 1) -> Page :
         raise NotImplemented
@@ -178,9 +200,9 @@ class Zoro(Provider):
             extra_details += (info_tag.text + " . ") if info_tag.text is not None else ""
         extra_details = extra_details.strip()
         extra_details = extra_details.strip("  .  ")
-        is_tv: bool = True if film_info_tags[-1].text == "TV" else False
+        film_type: str = film_info_tags[0].text.lower()
 
-        return Film(title,self._host_url + link,is_tv,poster_url=poster_url,extra= extra_details)
+        return Film(title,self._host_url + link,film_type,poster_url=poster_url,extra= extra_details)
 
     def parse_pagination_elements(self,elements: List[lxml.html.HtmlElement]) -> PageInfo:
         current_page: int = 1

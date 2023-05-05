@@ -184,6 +184,7 @@ class Sol(Provider):
         recommendations: List[Film] = list(map(self.parse_FLW_element,flw_items))
         poster_url:str = html_doc.cssselect(".detail_page-infor .film-poster-img")[0].get("src")
         poster_image: bytes = self.load_poster_image(poster_url)
+
         return FilmInfo(title=title,release=release,description=description.strip(),genre=genre,country=country,duration=duration,recommendation=recommendations,poster_image=poster_image)
 
     def parse_FLW_element(self,element: lxml.html.HtmlElement) -> Film:
@@ -198,11 +199,7 @@ class Sol(Provider):
             extra_details += (info_tag.text + " . ") if info_tag.text is not None else ""
         extra_details = extra_details.strip()
         extra_details = extra_details.strip("  .  ")
-        is_tv: bool = True if film_info_tags[-1].text == "TV" else False
-        if is_tv:
-            film_type: str = "tv"
-        else:
-            film_type: str = "movie"
+        film_type: str = film_info_tags[-1].text.lower()
 
         return Film(title,self._host_url + link,film_type,poster_url=poster_url,extra= extra_details)
 

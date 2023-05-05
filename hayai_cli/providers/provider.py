@@ -134,7 +134,6 @@ class Provider(ABC):
             sys.exit()
         self.print_films(films)
         film_index = click.prompt(click.style("Enter a number",fg=self._prompt_color),type=click.IntRange(1,len(films)))
-        film_info: FilmInfo = self.load_film_info(films[film_index -1].link)
         param_id: str = (films[film_index -1].link).rsplit("-",1)[-1]
         if films[film_index - 1].film_type == "tv":
             click.secho("Getting seasons...",fg=self._progress_color)
