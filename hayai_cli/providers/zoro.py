@@ -15,7 +15,16 @@ class Zoro(Provider):
 
     def __init__(self) -> None:
         super().__init__()
+        self._server_type: str = "sub"
 
+
+    @property
+    def server_type(self):
+        return self._server_type
+
+    @server_type.setter
+    def server_type(self,server_type: str):
+        self._server_type = server_type
 
     def load_seasons(self, film_id: str) -> List[Season]:
         return [Season("1",film_id)]
@@ -43,14 +52,21 @@ class Zoro(Provider):
             r.raise_for_status()
             html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.json().get("html"))
             server_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".server-item")
-            servers: List[VideoServer] = [] 
+            servers_dub: List[VideoServer] = [] 
+            servers_sub: List[VideoServer] = [] 
             for server_element in server_elements:
                 server_id: str = server_element.get("data-id")
                 server_title: str = server_element.cssselect("a")[0].text
                 server_type: str = server_element.get("data-type")
                 server_title += " " + server_type
-                servers.append(VideoServer(server_title,server_id))
-            return servers
+                if server_type.lower() == "dub":
+                    servers_dub.append(VideoServer(server_title,server_id))
+                else:
+                    servers_sub.append(VideoServer(server_title,server_id))
+            if self._server_type == "dub":
+                return servers_dub + servers_sub
+            else:
+                return servers_sub + servers_dub
         except Exception as e:
             return []
     
