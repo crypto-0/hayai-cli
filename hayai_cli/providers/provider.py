@@ -30,11 +30,12 @@ class Season:
 
 @dataclass(frozen=True,eq=True)
 class Film:
-    title: str
-    link: str
-    film_type: str
-    extra: str
-    poster_url: str
+    title: str = ""
+    link: str = ""
+    film_type: str = ""
+    extra: str = ""
+    poster_url: str = ""
+    film_id: str = ""
 
 @dataclass(frozen=True)
 class FilmInfo:
@@ -134,7 +135,7 @@ class Provider(ABC):
             sys.exit()
         self.print_films(films)
         film_index = click.prompt(click.style("Enter a number",fg=self._prompt_color),type=click.IntRange(1,len(films)))
-        param_id: str = (films[film_index -1].link).rsplit("-",1)[-1]
+        param_id: str = films[film_index -1].film_id
         if films[film_index - 1].film_type == "tv":
             click.secho("Getting seasons...",fg=self._progress_color)
             seasons = self.load_seasons(param_id)

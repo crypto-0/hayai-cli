@@ -200,8 +200,9 @@ class Sol(Provider):
         extra_details = extra_details.strip()
         extra_details = extra_details.strip("  .  ")
         film_type: str = film_info_tags[-1].text.lower()
+        film_id: str = link.rsplit("-",1)[-1]
 
-        return Film(title,self._host_url + link,film_type,poster_url=poster_url,extra= extra_details)
+        return Film(title,self._host_url + link,film_type,poster_url=poster_url,extra= extra_details,film_id=film_id)
 
     def parse_pagination_elements(self,elements: List[lxml.html.HtmlElement]) -> PageInfo:
         current_page: int = 1

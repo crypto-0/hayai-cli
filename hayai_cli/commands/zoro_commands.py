@@ -6,17 +6,6 @@ from hayai_cli.providers import Page
 def zoro_cli():
     pass
 
-@zoro_cli.command(name="home",help="show home")
-@click.option("-m", "--mode",help="play or download",type=click.Choice(["play","download"]),default = "download")
-@click.option("-d", "--download_dir",help="download directory ",type=str,default = ".")
-@click.option("-q", "--quality",help="quality of stream",type=str,default ="1080")
-@click.option("--server_type",help="type of server dub or sub",type=click.Choice(["dub","sub"]),default ="sub")
-def home_cmd(mode: str,download_dir: str,quality: str,server_type: str):
-    zoro: Zoro = Zoro()
-    zoro.server_type = server_type
-    home_page: Page = zoro.load_home()
-    zoro.display(home_page.films,mode,download_dir,quality)
-
 @zoro_cli.command(name="search",help="search for movies or shows")
 @click.argument("query",required=True)
 @click.option("-p", "--page",help="page to display",type=int,default = 1)
@@ -29,6 +18,18 @@ def search_cmd(query:str,page: int,mode: str,download_dir: str,quality: str,serv
     zoro.server_type = server_type
     search_page: Page = zoro.load_search(query=query,page_number=page)
     zoro.display(search_page.films,mode,download_dir,quality)
+
+@zoro_cli.command(name="home",help="show home")
+@click.option("-m", "--mode",help="play or download",type=click.Choice(["play","download"]),default = "download")
+@click.option("-d", "--download_dir",help="download directory ",type=str,default = ".")
+@click.option("-q", "--quality",help="quality of stream",type=str,default ="1080")
+@click.option("--server_type",help="type of server dub or sub",type=click.Choice(["dub","sub"]),default ="sub")
+def home_cmd(mode: str,download_dir: str,quality: str,server_type: str):
+    zoro: Zoro = Zoro()
+    zoro.server_type = server_type
+    home_page: Page = zoro.load_home()
+    zoro.display(home_page.films,mode,download_dir,quality)
+
     
 @zoro_cli.command(name="movies",help="Show movies")
 @click.option("-p", "--page",help="page to display",type= int,default = 1)
