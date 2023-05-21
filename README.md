@@ -43,7 +43,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-This is movies or tv show stream/downloader Application that will scrape streaming services like solarmovie.pe 
+This is movies or tv show stream/downloader Application that will scrape streaming services like solarmovie.pe,zoro.to,and asianhdplay.pro 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -90,13 +90,17 @@ This argument is used to get help if lost or don't know what to do and will exis
 This argument is used by all category to specifie if to play or download
 
 ### -p / --page
-This argument is used by all category except home to get the specific page such page 5 of trending category
+This argument is used by all category except home for sol and zoro to get the specific page such page 5 of trending category
 
 ### -q / --quality
 This argument is used by all category to get the specified quality of a stream
 
 ### -d / --dir
 This argument is used by all category to specifie which directory to download 
+
+###   / --server_type
+This argument is used by all category of zoro provider to get dubbed or subbed anime server
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Demo
